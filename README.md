@@ -2,8 +2,10 @@
 
 Nine hand-picked Gerrymandle boards, each with a solution certified by
 exhaustive search: every legal way of cutting the board into districts was
-enumerated, and exactly one of them wins the election for purple. The
-generated page is at `site/gerrymandle-nine-boards.html`.
+enumerated, and exactly one of them wins the election for purple. The first
+four are boards I manually constructed and checked for unique solutions, and
+the other five boards were automatically generated. The generated page is at
+`site/gerrymandle-nine-boards.html`.
 
 ## Rules modeled
 
