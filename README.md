@@ -1,11 +1,14 @@
 # Gerrymandle puzzle generator
 
-Nine hand-picked Gerrymandle boards, each with a solution certified by
+Fifteen hand-picked Gerrymandle boards, each with a solution certified by
 exhaustive search: every legal way of cutting the board into districts was
-enumerated, and exactly one of them wins the election for purple. The first
-four are boards I manually constructed and checked for unique solutions, and
-the other five boards were automatically generated. The generated page is at
-`site/gerrymandle-nine-boards.html`.
+enumerated, and exactly one of them wins the election for purple. The
+generated page is at `site/gerrymandle-boards.html`.
+
+The set spans boards from 4x4 up to 8x9, 2 to 10 districts, 3 to 6 parties,
+and 3 to 7 houses per district. Six party colours are supported: purple (P),
+green (G), amber (O), cyan (C), rose (R) and indigo (B). Purple is the target
+party on every board.
 
 ## Rules modeled
 
@@ -35,10 +38,12 @@ the other five boards were automatically generated. The generated page is at
   looks for boards with **exactly one** winning partition for the target
   party. Both re-certify any hit with an uncapped, unlimited search before
   accepting it.
-- `data/solid_puzzles.json`, `data/open_puzzles.json` — the nine chosen
-  puzzles: board layout, voter counts, the unique winning solution, and
-  exhaustive search statistics (total legal partitions, how many end in a
-  tie, how many are outright losses).
+- `data/solid_puzzles.json`, `data/open_puzzles.json`,
+  `data/varied_puzzles.json` — the fifteen chosen puzzles, one file per
+  section of the page: board layout, voter counts, the unique winning
+  solution, and exhaustive search statistics (total legal partitions, how
+  many end in a tie, how many are outright losses). `varied_puzzles.json`
+  holds the boards that vary size, party count and district size.
 - `generate_site.py` — renders the JSON puzzle data into the HTML page in
   `site/`.
 
@@ -48,7 +53,7 @@ the other five boards were automatically generated. The generated page is at
 python3 generate_site.py
 ```
 
-Reads `data/*.json`, writes `site/gerrymandle-nine-boards.html`.
+Reads `data/*.json`, writes `site/gerrymandle-boards.html`.
 
 ## Searching for new puzzles
 

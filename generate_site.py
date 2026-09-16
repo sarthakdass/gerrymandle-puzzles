@@ -1,8 +1,12 @@
 import json, math, os
 
-P = {'P': '#a855f7', 'G': '#22c55e', 'O': '#f59e0b', 'C': '#38bdf8'}
-FILL = {'P': '#2a1442', 'G': '#0f3520', 'O': '#3a2506', 'C': '#07293d'}
-NAMEC = {'P': 'purple', 'G': 'green', 'O': 'amber', 'C': 'cyan'}
+P = {'P': '#a855f7', 'G': '#22c55e', 'O': '#f59e0b', 'C': '#38bdf8',
+     'R': '#fb7185', 'B': '#6366f1'}
+FILL = {'P': '#2a1442', 'G': '#0f3520', 'O': '#3a2506', 'C': '#07293d',
+        'R': '#3d1520', 'B': '#1b1d4a'}
+NAMEC = {'P': 'purple', 'G': 'green', 'O': 'amber', 'C': 'cyan',
+         'R': 'rose', 'B': 'indigo'}
+ORDER = ['P', 'G', 'O', 'C', 'R', 'B']
 S = 26.0
 SQ3 = math.sqrt(3)
 
@@ -114,7 +118,7 @@ def ascii_map(land):
 def bar(voters):
     tot = sum(voters.values())
     seg = []
-    for p in ['P', 'G', 'O', 'C']:
+    for p in ORDER:
         if p in voters:
             seg.append(f'<span class="seg" style="width:{100*voters[p]/tot:.2f}%;'
                        f'background:{P[p]}">{voters[p]}</span>')
@@ -130,9 +134,11 @@ def result_line(oc):
 
 
 TITLE = {
- 'A': 'first puzzle', 'B': 'heat', 'C': 'coccyx ring', 'D': 'isthmus',
- 'E': 'graveyard', 'F': 'evening', 'G': 'heavy',
- 'H': 'four-way stop', 'I': 'houseparty',
+ 'A': 'Four&ndash;two', 'B': 'The dead heat', 'C': 'The ring', 'D': 'The isthmus',
+ 'E': 'Five graves', 'F': 'Even split', 'G': 'Heavy districts',
+ 'H': 'Four-way', 'I': 'One seat, six houses',
+ 'Q': 'Four by four', 'J': 'Two districts', 'N': 'Five parties',
+ 'M': 'Six to a district', 'L': 'All six', 'K': 'Ten districts',
 }
 
 BLURB = {
@@ -163,6 +169,25 @@ BLURB = {
  'I': ("Six houses per district across five districts. Purple holds nine of thirty houses and "
        "wins one district while the other four are tied dead. The narrowest margin here: only "
        "58 of the 2,066 legal cuts even leave purple level."),
+ 'Q': ("The smallest board here: twelve houses on four rows, three parties, three districts. "
+       "Only 53 legal cuts exist and 41 of them leave purple level, so almost every move you "
+       "can make is a draw. Purple takes two districts and kills the third."),
+ 'J': ("Two districts of seven houses, and purple is the smallest party with four. Purple "
+       "cannot win both &mdash; it wins one and forces the other into a three-way stall that "
+       "green and amber split evenly. One district to purple, none to anyone else."),
+ 'N': ("Five parties, four houses each, five districts. With four houses to a district a "
+       "2&ndash;2 split is fatal, and four of the five districts end that way. Purple takes "
+       "the one that doesn't."),
+ 'M': ("Two parties but six houses per district, so a 3&ndash;3 split kills a district "
+       "outright. Purple is down 11&ndash;13 and still finishes ahead: two districts to "
+       "purple, one to green, and one buried at three apiece."),
+ 'L': ("Every party holds exactly five houses and every district holds exactly five houses, "
+       "so nothing is decided by arithmetic &mdash; only by where the lines fall. Purple wins "
+       "a single district and all five others deadlock. The hardest of the new set: 11,530 of "
+       "the 17,895 legal cuts leave purple tied rather than ahead."),
+ 'K': ("Ten districts of three houses across four parties. Districts are tiny, so a "
+       "1&ndash;1&ndash;1 stall is always one bad tile away, and three of them happen. Purple "
+       "takes three, green and cyan two each."),
 }
 
 SEC1 = ("Every tile on these four boards holds a house, so districts are simply connected "
@@ -171,11 +196,16 @@ SEC2 = ("These five boards have open ground: tiles that are part of the map and 
         "into a district, but hold no house. They are stepping stones. A district can reach "
         "across them to pick up houses it could not otherwise touch, and it can also ignore "
         "them entirely.")
+SEC3 = ("These six push on the other dials: board size, how many parties are running, and how "
+        "many houses go in a district. They run from a twelve-house board settled in three "
+        "districts up to ten districts of three houses, and from three parties up to six. "
+        "Bigger districts and more parties both make dead heats easier to engineer, which is "
+        "usually how purple gets in.")
 
 
 def block(z, k, land, sol, extra_chips):
     v = z['voters']; tot = sum(v.values())
-    parts = ' &middot; '.join(f"{v[p]} {NAMEC[p]}" for p in ['P', 'G', 'O', 'C'] if p in v)
+    parts = ' &middot; '.join(f"{v[p]} {NAMEC[p]}" for p in ORDER if p in v)
     pad = z.get('paddings')
     padline = ''
     if pad is not None:
@@ -217,33 +247,53 @@ def block(z, k, land, sol, extra_chips):
 </section>'''
 
 
+def dims(land):
+    cols = [c for c, r in land]; rows = [r for c, r in land]
+    return max(cols) - min(cols) + 1, max(rows) - min(rows) + 1
+
+
 def main():
     solid = json.load(open('data/solid_puzzles.json'))
     open_g = json.load(open('data/open_puzzles.json'))
+    varied = json.load(open('data/varied_puzzles.json'))
     order = {'E': 0, 'F': 1, 'G': 2, 'H': 3, 'I': 4}
     open_g.sort(key=lambda z: order[z['name']])
+    vorder = {'Q': 0, 'J': 1, 'N': 2, 'M': 3, 'L': 4, 'K': 5}
+    varied.sort(key=lambda z: vorder[z['name']])
 
-    blocks1, blocks2 = [], []
+    blocks1, blocks2, blocks3 = [], [], []
     k = 0
     for z in solid:
         k += 1
         land = {(c, r): ch for c, r, ch in z['cells']}
         sol = [[tuple(t) for t in d] for d in z['sol']]
+        w, h = dims(land)
         chips = [f"{z['K']} houses per district", f"{len(z['voters'])} parties",
-                 f"{z['ndist']} districts"]
+                 f"{z['ndist']} districts", f"{w}&times;{h} board"]
         blocks1.append(block(z, k, land, sol, chips))
     for z in open_g:
         k += 1
         land = {(c, r): ch for c, r, ch in z['land']}
         sol = [[tuple(t) for t in d] for d in z['sol']]
+        w, h = dims(land)
         chips = [f"{z['K']} houses per district", f"{len(z['voters'])} parties",
-                 f"{z['ndist']} districts", f"{z['nempty']} open tiles"]
+                 f"{z['ndist']} districts", f"{z['nempty']} open tiles",
+                 f"{w}&times;{h} board"]
         blocks2.append(block(z, k, land, sol, chips))
+    for z in varied:
+        k += 1
+        land = {(c, r): ch for c, r, ch in z['land']}
+        sol = [[tuple(t) for t in d] for d in z['sol']]
+        w, h = dims(land)
+        chips = [f"{z['K']} houses per district", f"{len(z['voters'])} parties",
+                 f"{z['ndist']} districts", f"{z['nempty']} open tiles",
+                 f"{w}&times;{h} board"]
+        blocks3.append(block(z, k, land, sol, chips))
 
     html = f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Nine Gerrymandle boards with exactly one purple win</title>
+<title>Fifteen Gerrymandle boards with exactly one purple win</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@500;600&display=swap" rel="stylesheet">
@@ -298,7 +348,7 @@ overflow:auto;font-size:13px;line-height:1.5;color:#93a2ba}}
 @media(max-width:860px){{.grid{{grid-template-columns:1fr;gap:26px}}h1{{font-size:34px}}
 .wrap{{padding:40px 18px 64px}}}}
 </style></head><body><div class="wrap">
-<h1>Nine Gerrymandle boards with exactly one <span class="p">purple</span> win</h1>
+<h1>Fifteen Gerrymandle boards with exactly one <span class="p">purple</span> win</h1>
 <div class="lede">
 <p>Every board here was searched exhaustively: all legal ways of cutting it were enumerated,
 and in each case precisely one of them puts purple ahead. No second answer, no
@@ -320,6 +370,8 @@ election by taking more districts than every other party.</p>
 {''.join(blocks1)}
 <div class="secthead"><h2>Boards with open ground</h2><p>{SEC2}</p></div>
 {''.join(blocks2)}
+<div class="secthead"><h2>Other sizes, parties and district sizes</h2><p>{SEC3}</p></div>
+{''.join(blocks3)}
 </div>
 <script>
 document.querySelectorAll('.toggle').forEach(function(btn){{
@@ -335,7 +387,7 @@ document.querySelectorAll('.toggle').forEach(function(btn){{
 </script>
 </body></html>'''
     os.makedirs('site', exist_ok=True)
-    open('site/gerrymandle-nine-boards.html', 'w').write(html)
+    open('site/gerrymandle-boards.html', 'w').write(html)
     print('written', len(html))
 
 
